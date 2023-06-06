@@ -74,8 +74,7 @@ extern float
 	total_sed_mass,
 	xmin, xmax, ymin, ymax,
 	tau_c, //added by m berry
-	svfactor, 
-    retct, 
+    	retct, 
 	PSw,
 	PSs,
 	eqr, 
@@ -234,7 +233,6 @@ int Surface_Transport (float **topo, float **topo_ant, float dt, float dt_eros, 
 	    for (int i=0; i<Ny; i++) for (int j=0; j<Nx; j++) {
 	    	drainage[i][j].masstr = 0;
 	    	drainage[i][j].discharge = 0;
-		  	drainage[i][j].effdischarge = 0; 		
 	    }
 	    /*Resorts the matrix of topography.*/
 	    ReSort_Matrix (topo, sortcell, Nx, Ny);
@@ -1388,10 +1386,6 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
 	  This bucle starts from the top point and
 	  descends transferring the eroded mass
 	*/
-    for (int i=0; i<Ny; i++) for (int j=0; j<Nx; j++) {
-		drainage[i][j].effdischarge = 0;
-		drainage[i][j].effdischarge = svfactor * drainage[i][j].discharge;
-	}
 	if (erosed_model>=2) for (int isort=0; isort < Nx*Ny; isort++) {
 	    float minsorr_trib, maxsorr, minsorr, main_tribut_slope, main_tribut_disch, main_tribut_alt;
 	    row = sortcell[isort].row;  col = sortcell[isort].col;
@@ -1709,7 +1703,7 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
 		case 2:
 			/*Beaumont et al. (1992) stream power law ('uncercapacity'):*/
 			/*Transport capacity in equilibrium [kg/s]. Whipple & Tucker, 2002 conclude m'=n'=1*/
-			transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	/*Eq. 16 of Tucker&Slingerland, 1996*/
+			transp_capacity_eq = K_river_cap * drainage[row][col].discharge * slope;	/*Eq. 16 of Tucker&Slingerland, 1996*/
 
 			TRANSPORT_BOUNDARY_CONDITIONS;
 			/*EROSION*/
@@ -1726,7 +1720,7 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
 
 		case 3:
 			/*Tucker & Slingerland (1996) hybrid stream power:*/
-			transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	/*Eq. 16 of Tucker&Slingerland, 1996*/
+			transp_capacity_eq = K_river_cap * drainage[row][col].discharge * slope;	/*Eq. 16 of Tucker&Slingerland, 1996*/
 
 			TRANSPORT_BOUNDARY_CONDITIONS;
 			if (transp_capacity_eq >= drainage[row][col].masstr) {
@@ -1735,7 +1729,7 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
 				ERODED_ERODIBILITY;
 				/*bedrock channel incision*/
 				dh = erodibility_aux	    /*Eq. 11 of T&S*/
-					* pow((double)drainage[row][col].effdischarge, (double)spl_m) 
+					* pow((double)drainage[row][col].discharge, (double)spl_m) 
 					* pow((double)slope,			(double)spl_n)
 					* dt_st;
 					d_mass = THICK2SEDMASS(dh);
@@ -1749,7 +1743,7 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
 		case 4:
 		    	/*Modified stream power used by Davy's group (see Loget et al., 2006, Gibraltar), similar to Beaumont's and Kooi's:*/
 		    	/*Transport capacity in equilibrium [kg/s].*/
-		    	transp_capacity_eq = K_river_cap * pow(drainage[row][col].effdischarge, 1.5) * slope; 
+		    	transp_capacity_eq = K_river_cap * pow(drainage[row][col].discharge, 1.5) * slope; 
 				TRANSPORT_BOUNDARY_CONDITIONS;
 				/*EROSION*/
 				if (transp_capacity_eq >= drainage[row][col].masstr) {
@@ -1765,12 +1759,12 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
 		    case 5:
 		    	/*Undercapacity of Beaumont incorporating width by van der Beek & Bishop, 2003 (described in Cowie et al., 2006), modifies Beaumont's*/
 		    	/*Transport capacity in equilibrium [kg/s].*/
-		    	transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	 
+		    	transp_capacity_eq = K_river_cap * drainage[row][col].discharge * slope;	 
 				TRANSPORT_BOUNDARY_CONDITIONS;
 				/*EROSION*/
 				if (transp_capacity_eq >= drainage[row][col].masstr) {
 					ERODED_ERODIBILITY;
-					d_mass = dist / erodibility_aux / pow(drainage[row][col].effdischarge, .5) * (transp_capacity_eq - drainage[row][col].masstr) * dt_st; 
+					d_mass = dist / erodibility_aux / pow(drainage[row][col].discharge, .5) * (transp_capacity_eq - drainage[row][col].masstr) * dt_st; 
 				}
 				/*SEDIMENTATION*/
 				else {
@@ -1780,7 +1774,7 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
 
 		    case 6:
 		        /*Garcia-Castellanos & Villasenor (2011, Nature) basal shear stress approach:*/
-		        transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	   
+		        transp_capacity_eq = K_river_cap * drainage[row][col].discharge * slope;	   
 				TRANSPORT_BOUNDARY_CONDITIONS;
 		        if (transp_capacity_eq >= drainage[row][col].masstr) {
 					float a=1.5, Kw=1.1, aw=0.5;
@@ -1789,7 +1783,7 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
 						/*bedrock channel incision*/
 					ERODED_ERODIBILITY;
 						dh = erodibility_aux/secsperyr * pow(1020*g, a) * pow((double).05/Kw, (double) 3*a/5)
-						     * pow((double)drainage[row][col].effdischarge, (double)spl_m)  
+						     * pow((double)drainage[row][col].discharge, (double)spl_m)  
 						     * pow((double)slope, (double)spl_n) * dt_st;
 					if (transp_capacity_eq) dh *= (transp_capacity_eq-drainage[row][col].masstr)/transp_capacity_eq;
 					d_mass = THICK2SEDMASS(dh);
@@ -1802,7 +1796,7 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
 
 		    case 7:
 		        /*Ferrier et al. (2013, Nature) unit stream power approach:*/
-		        transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	  /
+		        transp_capacity_eq = K_river_cap * drainage[row][col].discharge * slope;	  /
 				TRANSPORT_BOUNDARY_CONDITIONS;
 		        if (transp_capacity_eq >= drainage[row][col].masstr) {
 					float a=1, Kw=1.1, aw=0.5;
@@ -1811,7 +1805,7 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
 						/*bedrock channel incision*/
 					ERODED_ERODIBILITY;
 						dh = erodibility_aux/secsperyr * pow(1020*g, a) / Kw
-							* pow((double)drainage[row][col].effdischarge, (double)spl_m) 
+							* pow((double)drainage[row][col].discharge, (double)spl_m) 
 						* pow((double)slope, 			(double)spl_n)
 							* dt_st;
 					if (transp_capacity_eq) dh *= (transp_capacity_eq-drainage[row][col].masstr)/transp_capacity_eq;
@@ -1827,7 +1821,7 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
 			/*very much like case 6 (Garcia-costellanos and Villasenor 2011) however we adapt a critical shear stress value
 			and a hyperbolic sediment dependancy.*/
 			case 8:
-				transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	    /*^^Eq. 16 of Tucker&Slingerland, 1996*/
+				transp_capacity_eq = K_river_cap * drainage[row][col].discharge * slope;	    /*^^Eq. 16 of Tucker&Slingerland, 1996*/
 				TRANSPORT_BOUNDARY_CONDITIONS;
 				if (transp_capacity_eq >= drainage[row][col].masstr) {
 				/*any additional variables here*/
@@ -1836,7 +1830,7 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
 					/*same as #6, however added the tau_c and pulled the exponant out of the individual powers*/
 					ERODED_ERODIBILITY;
 					double in_eqn = 1020 * g * pow((double).05/Kw,(double) 3/5) *
-					pow((double)drainage[row][col].effdischarge, (double)(3*(1-aw))/5) * 
+					pow((double)drainage[row][col].discharge, (double)(3*(1-aw))/5) * 
 					pow((double)slope, (double)7/10) - tau_c ;
 					dh = erodibility_aux/secsperyr * pow((double) in_eqn, a) * dt_st;
 					/*scaling factor*/
@@ -1856,153 +1850,8 @@ int Fluvial_Transport(struct GRIDNODE *sortcell, float dt_st, int erosed_model, 
   			/* A new hydrologic model developed for test case scenarios and GBP models */
 			/* The scalar f(q_s) = 1 for all situations*/
 
-			case 9:
-				transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	   
-				TRANSPORT_BOUNDARY_CONDITIONS;
-				if (transp_capacity_eq >= drainage[row][col].masstr) {
-					float a=1.5, Kw=1.1, aw=0.5;
-					ERODED_ERODIBILITY;
-					double in_eqn = 1020 * g * pow((double).05/Kw,(double) 3/5) *
-					pow((double)drainage[row][col].effdischarge, (double)(3*(1-aw))/5) *  
-					pow((double)slope, (double)7/10) - tau_c;
-					dh = erodibility_aux/secsperyr * pow((double) in_eqn, a) * dt_st;
-					/* f(q_s) set to be one (maximum) for all situations */
-					d_mass = THICK2SEDMASS(dh);
-				}
-				else{
-					d_mass = (dist / l_fluv_sedim) * (transp_capacity_eq - drainage[row][col].masstr) * dt_st;
-				}
-				break;
-
-			case 10: 
-				/* Below if statements maintain a constant slope along the boundary so that it always has some gradient != 0 to erode*/
-				transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	  
-				TRANSPORT_BOUNDARY_CONDITIONS;
-				if (transp_capacity_eq >= drainage[row][col].masstr) {
-							float a=1.5, Kw=1.1, aw=0.5;
-							ERODED_ERODIBILITY;
-							double in_eqn = 1020 * g * pow((double).05/Kw,(double) 3/5) *
-							pow((double)drainage[row][col].effdischarge, (double)(3*(1-aw))/5) * 
-							pow((double)slope, (double)7/10);
-							dh = erodibility_aux/secsperyr * pow((double) in_eqn, a) * dt_st; 
-							d_mass = THICK2SEDMASS(dh);
-							dh_1[row][col] += dh; 
-						}
-				else{
-					d_mass =
-						dist / l_fluv_sedim * (transp_capacity_eq - drainage[row][col].masstr) * dt_st;
-					}
-				break;
-
-			case 333: 
-				transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	 
-				lfs = 0;	
-				qmax = 0;
-				qmin = 0;
-				for (int i; i < Ny-1; i++){
-					for (int j; j < Nx-1; j++){
-						if (drainage[i][j].type == 'R'){
-							if (qmax < drainage[i][j].effdischarge){
-								qmax = drainage[i][j].effdischarge;
-							}
-							icnt++;
-						}
-					}
-				}
-				binsize = (qmax - qmin)/bins;
-				assigned_q_threshold = binsize * 3; 
-				bp = 0;				
-				snum = 0;
-				tempdischarge = 0;
-				urow = row;
-    			ucol = col;
-				while (snum == 3){
-					urowtemp = urow;
-					ucoltemp = ucol;
-					if (qstats(urow, ucol)){
-					for (int iup=0; iup < Ny; iup++){
-						for (int jup=0; jup < Nx; jup++){
-							if (drainage[iup][jup].dr_row == urow && drainage[iup][jup].dr_col == ucol && drainage[iup][jup].type == 'R'){
-								if (drainage[iup][jup].discharge > tempdischarge){
-									tempdischarge = drainage[iup][jup].discharge; 
-									urow1 = iup; ucol1 = jup;                        
-								}							
-							}
-						}
-					}
-					}
-					urow = urow1; ucol = ucol1;        					
-					if (urow == urowtemp && ucol == ucoltemp){bp = 1; break;}                   					
-					snum++;				
-				}
-				if (drainage[row][col].type == 'R' && drainage[row][col].effdischarge > assigned_q_threshold && snum > 10){
-					if (drow >= 0 && drow <= Ny-1){
-								if (dcol >= 0 && dcol <= Nx-1){
-						if (slopestats(row, col)){
-							s1 = (topo[row][col] - topo[row+1][col])/dy;
-							s2 = (topo[row][col] - topo[row-1][col])/dy;
-							s3 = (topo[row][col] - topo[row][col+1])/dx;
-							s4 = (topo[row][col] - topo[row][col-1])/dx;
-							s5 = (topo[row][col] - topo[row+1][col+1])/dxy;
-							s6 = (topo[row][col] - topo[row+1][col-1])/dxy;
-							s7 = (topo[row][col] - topo[row-1][col+1])/dxy;
-							s8 = (topo[row][col] - topo[row-1][col-1])/dxy;							
-							if (drow >= 0 && drow <= Ny-1){
-								if (dcol >= 0 && dcol <= Nx-1){
-									s11 = (topo[drow][dcol] - topo[drow+1][dcol])/dy;
-									s12 = (topo[drow][dcol] - topo[drow-1][dcol])/dy;
-									s13 = (topo[drow][dcol] - topo[drow][dcol+1])/dx;
-									s14 = (topo[drow][dcol] - topo[drow][dcol-1])/dx;
-									s15 = (topo[drow][dcol] - topo[drow+1][dcol+1])/dxy;
-									s16 = (topo[drow][dcol] - topo[drow+1][dcol-1])/dxy;
-									s17 = (topo[drow][dcol] - topo[drow-1][dcol+1])/dxy;
-									s18 = (topo[drow][dcol] - topo[drow-1][dcol-1])/dxy;
-									savg = (s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8) / 8;
-									savg1 = (s11 + s12 + s13 + s14 + s15 + s16 + s17 + s18) / 8;
-									sstdev = sqrt((pow(s1-savg, 2) + pow(s2-savg, 2) + pow(s3-savg, 2) + pow(s4-savg, 2) + 
-											pow(s5-savg, 2)+ pow(s6-savg, 2)+ pow(s7-savg, 2)+ pow(s8-savg, 2)) / 8);
-									sstdev1 = sqrt((pow(s11-savg1, 2) + pow(s12-savg1, 2) + pow(s13-savg1, 2) + pow(s14-savg1, 2) + 
-											pow(s15-savg1, 2)+ pow(s16-savg1, 2)+ pow(s17-savg1, 2)+ pow(s18-savg1, 2)) / 8);
-									if (topo[drow][dcol] < topo[row][col] && drainage[drow][dcol].type == 'R'){
-										if (sstdev > 2*sstdev1){
-										if (savg > 2*savg1){
-											lfs = 1;	
-											drainage[row][col].fanfreq = drainage[row][col].fanfreq + 1;												
-												}
-											}
-										}
-									}
-								}	
-							}													
-						}
-					}
-				}
-				if (row == 0){
-					TRANSPORT_BOUNDARY_CONDITIONS;
-				}				
-				if (lfs == 1){
-					d_mass = -(dist / (3)) * drainage[row][col].masstr * dt_st;
-				}
-				else{
-					if (transp_capacity_eq >= drainage[row][col].masstr) {
-							float a=1.5, Kw=1.1, aw=0.5;
-							ERODED_ERODIBILITY;
-							double in_eqn = 1020 * g * pow((double).05/Kw,(double) 3/5) *
-							pow((double)drainage[row][col].effdischarge, (double)(3*(1-aw))/5) * 
-							pow((double)slope, (double)7/10);
-							dh = erodibility_aux/secsperyr * pow((double) in_eqn, a) * dt_st; 
-							d_mass = THICK2SEDMASS(dh);
-							dh_1[row][col] += dh; 
-						}
-					else{
-						d_mass = dist / l_fluv_sedim * (transp_capacity_eq - drainage[row][col].masstr) * dt_st;
-					}
-				}				
-				break;
-
-
 case 107: 
-				transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	// initial calculation of transport capacity 
+				transp_capacity_eq = K_river_cap * drainage[row][col].discharge * slope;	// initial calculation of transport capacity 
 				/* Modification of calculated transport capacity below. The original value will be passed if not fans or apices */
 				// finding one-level upstream
 				lfs = 0;
@@ -2102,7 +1951,7 @@ case 107:
 						spl_n = 7/10;
 						ERODED_ERODIBILITY;
 						double in_eqn = 1020 * g * pow((double).05/Kw,(double) 3/5) *
-						pow((double)drainage[row][col].effdischarge, (double)(3*(1-aw))/5) *  
+						pow((double)drainage[row][col].discharge, (double)(3*(1-aw))/5) *  
 						pow((double)slope, (double)7/10);
 						dh = erodibility_aux/secsperyr * pow((double) in_eqn, a) * dt_st; 
 						d_mass = THICK2SEDMASS(dh);
@@ -2114,658 +1963,6 @@ case 107:
 				}								
 				break;
 
-case 207: 
-				transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	// initial calculation of transport capacity 
-				/* Modification of calculated transport capacity below. The original value will be passed if not fans or apices */
-				// finding one-level upstream
-				lfs = 0;
-				for (int iup=0; iup < Ny; iup++){
-					for (int jup=0; jup < Nx; jup++){
-						if (drainage[iup][jup].dr_row == row && drainage[iup][jup].dr_col == col){
-							urow1 = iup;
-							ucol1 = jup;
-						}
-					}
-				}
-				if (urow1==row-1 || urow1==row+1){
-					if (ucol1 == col){
-						dist1 = dy;
-					}
-					if (ucol1 == col + 1 || ucol1 == col - 1){
-						dist1 = dxy;
-					}
-				}
-				else if (urow1 == row){
-					if (ucol1 == col+1 || ucol1 == col-1){
-						dist1 = dx;
-					}
-				}
-				else{
-					dist1 = dxy;
-				}
-				if (urow1 < 0 || urow1 > Ny-1 || ucol1 < 0 || ucol1 > Nx-1){
-					uslope1 = 1e-15;
-				}
-				if (urow1 != 0 && ucol1 != 0){
-					if (urow1 != Ny-1 && ucol1 != Nx-1){
-						//PRINT_ERROR("row col [%d][%d] urow ucol [%d][%d] dist1 [%.1f]", row, col, urow1, ucol1, dist1);
-						if (dist1 > 0){
-							uslope1 = -(topo[row][col]-topo[urow1][ucol1])/dist1;
-						}
-						//else{
-						//	uslope1 = 1e-15;
-						//}
-					}
-				}
-				//else{
-				//	uslope1 = 1e-15;
-				//}
-				// Within domain
-				if (row < Ny - 3 && row > 3){
-					if (col < Nx - 3 && col > 3){
-						if (drainage[row][col].type == 'R' && drainage[drow][dcol].type == 'R'){ // edited 041121
-							if (IN_DOMAIN(drow, dcol)){
-								if (uslope1 >= slope){
-									// obtain statistical values																			
-									s1 = (topo[row-1][col-1] - topo[row][col]) / dxy;
-									s2 = (topo[row-1][col] - topo[row][col]) / dy;
-									s3 = (topo[row-1][col+1] - topo[row][col]) / dxy;
-									s4 = (topo[row][col-1] - topo[row][col]) / dx;
-									s5 = (topo[row][col+1] - topo[row][col]) / dx;
-									s6 = (topo[row+1][col-1] - topo[row][col]) / dxy;
-									s7 = (topo[row+1][col] - topo[row][col]) / dy;
-									s8 = (topo[row+1][col+1] - topo[row][col]) / dxy;
-									s11 = (topo[drow-1][dcol-1] - topo[drow][dcol]) / dxy;
-									s12 = (topo[drow-1][dcol] - topo[drow][dcol]) / dy;
-									s13 = (topo[drow-1][dcol+1] - topo[drow][dcol]) / dxy;
-									s14 = (topo[drow][dcol-1] - topo[drow][dcol]) / dx;
-									s15 = (topo[drow][dcol+1] - topo[drow][dcol]) / dx;
-									s16 = (topo[drow+1][dcol-1] - topo[drow][dcol]) / dxy;
-									s17 = (topo[drow+1][dcol] - topo[drow][dcol]) / dy;
-									s18 = (topo[drow+1][dcol+1] - topo[drow][dcol]) / dxy;
-									savg = (s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8) / 8;
-									savg1 = (s11 + s12 + s13 + s14 + s15 + s16 + s17 + s18) / 8;
-									sstdev = sqrt((pow(s1-savg, 2) + pow(s2-savg, 2) + pow(s3-savg, 2) + pow(s4-savg, 2) + 
-											pow(s5-savg, 2)+ pow(s6-savg, 2)+ pow(s7-savg, 2)+ pow(s8-savg, 2)) / 8);
-									sstdev1 = sqrt((pow(s11-savg1, 2) + pow(s12-savg1, 2) + pow(s13-savg1, 2) + pow(s14-savg1, 2) + 
-											pow(s15-savg1, 2)+ pow(s16-savg1, 2)+ pow(s17-savg1, 2)+ pow(s18-savg1, 2)) / 8);
-									if (sstdev > sstdev1){
-										if (savg > 2*savg1){
-											//PRINT_ERROR("Alluvial fan apex");
-											//transp_capacity_eq = 0;	
-											lfs = 1;	
-											drainage[row][col].fanfreq = drainage[row][col].fanfreq + 1;												
-										}
-									}
-								}
-							}							
-						}
-					}
-				}
-				if (row == 0 || row == Ny-1){
-					TRANSPORT_BOUNDARY_CONDITIONS; // macro for boundary conditions not even effective 
-				}
-				if (lfs == 1){
-					d_mass = -(dist / (2*dist)) * (drainage[row][col].masstr) * dt_st;
-				}	
-				else{
-					if (transp_capacity_eq >= drainage[row][col].masstr) {
-						float a=1.5, Kw=1.1, aw=0.5;
-						spl_m = (3*0.5)/5; 
-						spl_n = 7/10; 
-						ERODED_ERODIBILITY;
-						double in_eqn = 1020 * g * pow((double).05/Kw,(double) 3/5) *
-						pow((double)drainage[row][col].effdischarge, (double)(3*(1-aw))/5) * 
-						pow((double)slope, (double)7/10);
-						dh = erodibility_aux/secsperyr * pow((double) in_eqn, a) * dt_st; 
-						d_mass = THICK2SEDMASS(dh);
-					}
-					else{
-						d_mass =
-						dist / l_fluv_sedim * (transp_capacity_eq - drainage[row][col].masstr) * dt_st;					
-					}
-				}								
-				break;
-
-case 208: 
-				transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	// initial calculation of transport capacity 
-				/* Modification of calculated transport capacity below. The original value will be passed if not fans or apices */
-				// finding one-level upstream
-				lfs = 0;
-				for (int iup=0; iup < Ny; iup++){
-					for (int jup=0; jup < Nx; jup++){
-						if (drainage[iup][jup].dr_row == row && drainage[iup][jup].dr_col == col){
-							urow1 = iup;
-							ucol1 = jup;
-						}
-					}
-				}
-				if (urow1==row-1 || urow1==row+1){
-					if (ucol1 == col){
-						dist1 = dy;
-					}
-					if (ucol1 == col + 1 || ucol1 == col - 1){
-						dist1 = dxy;
-					}
-				}
-				else if (urow1 == row){
-					if (ucol1 == col+1 || ucol1 == col-1){
-						dist1 = dx;
-					}
-				}
-				else{
-					dist1 = dxy;
-				}
-				if (urow1 < 0 || urow1 > Ny-1 || ucol1 < 0 || ucol1 > Nx-1){
-					uslope1 = 1e-15;
-				}
-				if (urow1 != 0 && ucol1 != 0){
-					if (urow1 != Ny-1 && ucol1 != Nx-1){
-						//PRINT_ERROR("row col [%d][%d] urow ucol [%d][%d] dist1 [%.1f]", row, col, urow1, ucol1, dist1);
-						if (dist1 > 0){
-							uslope1 = -(topo[row][col]-topo[urow1][ucol1])/dist1;
-						}
-						//else{
-						//	uslope1 = 1e-15;
-						//}
-					}
-				}
-				//else{
-				//	uslope1 = 1e-15;
-				//}
-				// Within domain
-				if (row < Ny - 3 && row > 3){
-					if (col < Nx - 3 && col > 3){
-						if (drainage[row][col].type == 'R' && drainage[drow][dcol].type == 'R'){ // edited 041121
-							if (IN_DOMAIN(drow, dcol)){
-								if (uslope1 >= slope){
-									// obtain statistical values																			
-									s1 = (topo[row-1][col-1] - topo[row][col]) / dxy;
-									s2 = (topo[row-1][col] - topo[row][col]) / dy;
-									s3 = (topo[row-1][col+1] - topo[row][col]) / dxy;
-									s4 = (topo[row][col-1] - topo[row][col]) / dx;
-									s5 = (topo[row][col+1] - topo[row][col]) / dx;
-									s6 = (topo[row+1][col-1] - topo[row][col]) / dxy;
-									s7 = (topo[row+1][col] - topo[row][col]) / dy;
-									s8 = (topo[row+1][col+1] - topo[row][col]) / dxy;
-									s11 = (topo[drow-1][dcol-1] - topo[drow][dcol]) / dxy;
-									s12 = (topo[drow-1][dcol] - topo[drow][dcol]) / dy;
-									s13 = (topo[drow-1][dcol+1] - topo[drow][dcol]) / dxy;
-									s14 = (topo[drow][dcol-1] - topo[drow][dcol]) / dx;
-									s15 = (topo[drow][dcol+1] - topo[drow][dcol]) / dx;
-									s16 = (topo[drow+1][dcol-1] - topo[drow][dcol]) / dxy;
-									s17 = (topo[drow+1][dcol] - topo[drow][dcol]) / dy;
-									s18 = (topo[drow+1][dcol+1] - topo[drow][dcol]) / dxy;
-									savg = (s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8) / 8;
-									savg1 = (s11 + s12 + s13 + s14 + s15 + s16 + s17 + s18) / 8;
-									sstdev = sqrt((pow(s1-savg, 2) + pow(s2-savg, 2) + pow(s3-savg, 2) + pow(s4-savg, 2) + 
-											pow(s5-savg, 2)+ pow(s6-savg, 2)+ pow(s7-savg, 2)+ pow(s8-savg, 2)) / 8);
-									sstdev1 = sqrt((pow(s11-savg1, 2) + pow(s12-savg1, 2) + pow(s13-savg1, 2) + pow(s14-savg1, 2) + 
-											pow(s15-savg1, 2)+ pow(s16-savg1, 2)+ pow(s17-savg1, 2)+ pow(s18-savg1, 2)) / 8);
-									if (sstdev > sstdev1){
-										if (savg > 2*savg1){
-											//PRINT_ERROR("Alluvial fan apex");
-											//transp_capacity_eq = 0;	
-											lfs = 1;	
-											drainage[row][col].fanfreq = drainage[row][col].fanfreq + 1;												
-										}
-									}
-								}
-							}							
-						}
-					}
-				}
-				if (row == 0 || row == Ny-1){
-					TRANSPORT_BOUNDARY_CONDITIONS; // macro for boundary conditions not even effective 
-				}
-				if (lfs == 1){
-					d_mass = -(dist / (3*dist)) * (drainage[row][col].masstr) * dt_st;
-				}	
-				else{
-					if (transp_capacity_eq >= drainage[row][col].masstr) {
-						float a=1.5, Kw=1.1, aw=0.5;
-						spl_m = (3*0.5)/5;
-						spl_n = 7/10;
-						ERODED_ERODIBILITY;
-						double in_eqn = 1020 * g * pow((double).05/Kw,(double) 3/5) *
-						pow((double)drainage[row][col].effdischarge, (double)(3*(1-aw))/5) * 
-						pow((double)slope, (double)7/10);
-						dh = erodibility_aux/secsperyr * pow((double) in_eqn, a) * dt_st; 
-						d_mass = THICK2SEDMASS(dh);
-					}
-					else{
-						d_mass =
-						dist / l_fluv_sedim * (transp_capacity_eq - drainage[row][col].masstr) * dt_st;					
-					}
-				}								
-				break;				
-
-/*  */
-case 777: 
-	transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	// initial calculation of transport capacity 
-	/* Modification of calculated transport capacity below. The original value will be passed if not fans or apices */	
-	lfs = 0; // fan apex indicator 	
-	/* Finding the mainstream cell in one-level upstream area with the greatest discharge value */
-    tempdischarge = 0; // a constant to find the greatest discharge 
-    urow = row;
-    ucol = col;
-    bp = 0;
-    bp1 = 0;
-    snum = 0;
-    
-	//PRINT_ERROR("flag 1")
-    while (bp == 0){
-        urowtemp = urow;
-        ucoltemp = ucol;
-        for (int iup=0; iup < Ny; iup++){
-            for (int jup=0; jup < Nx; jup++){
-                if (drainage[iup][jup].dr_row == urow && drainage[iup][jup].dr_col == ucol){
-                    if (drainage[iup][jup].discharge > tempdischarge){
-                        tempdischarge = drainage[iup][jup].discharge; // greatest discharge
-                        urow1 = iup; ucol1 = jup;                        
-                    }							
-                }
-            }
-        }        
-        urow = urow1; ucol = ucol1;
-        if (urow == urowtemp && ucol == ucoltemp){bp = 1; break;}                
-        if (urow==urowtemp-1 || urow==urowtemp+1){
-            if (ucol == ucoltemp){
-                dist1 = dy;
-            }
-            if (ucol == ucoltemp + 1 || ucol == ucoltemp - 1){
-                dist1 = dxy;
-            }
-        }
-        else if (urow == urowtemp){
-            if (ucol == ucoltemp+1 || ucol == ucoltemp-1){
-                dist1 = dx;
-            }
-        }     
-        streamtopo[snum] = topo[urow][ucol];   
-        streamslope[snum] = -(topo[urowtemp][ucoltemp]-topo[urow][ucol])/dist1;
-        snum++;
-    }	
-	/* */	
-	//PRINT_ERROR("flag 2")
-    ddrow = drow;
-    ddcol = dcol;
-	snum_d = 0;
-	if (ddrow != -9999 && ddcol != -9999){
-		//PRINT_ERROR("ROW COL drow dcol %d %d %d %d", row, col, ddrow, ddcol);
-		while (bp1 == 0){
-			drowtemp = ddrow;
-			dcoltemp = ddcol;
-			//PRINT_ERROR("flag 2-1")
-			if (IN_DOMAIN(ddrow,ddcol)){
-				if (IN_DOMAIN(drainage[ddrow][ddcol].dr_row, drainage[ddrow][ddcol].dr_col)){
-					if (drainage[ddrow][ddcol].dr_row > -1 && drainage[ddrow][ddcol].dr_row < Ny){
-						if (drainage[ddrow][ddcol].dr_col > -1 && drainage[ddrow][ddcol].dr_col < Nx){
-							ddrow = drainage[ddrow][ddcol].dr_row;
-							ddcol = drainage[ddrow][ddcol].dr_col;
-						}
-						else{
-							break;
-						}
-					}			
-					else{
-						break;
-					}		
-				}
-				else{
-					break;
-				}				
-			}
-			//PRINT_ERROR("flag 2-2")
-			if (ddrow == -9999 || ddcol == -9999){
-				bp1 = 1;
-				break;
-			}
-			if (ddrow == drowtemp && ddcol == dcoltemp){
-				bp1 = 1;
-				break;
-			}
-			if (!IN_DOMAIN(ddrow, ddcol)){
-				bp1 = 1;
-				break;
-			}
-			if (ddrow == Ny-1 || ddrow == Ny-2){
-				break; // for fixed elevation boundary at Ny-1
-			}
-			if (drainage[ddrow][ddcol].type != 'R'){
-				break; // for non-river cells
-			}
-			if (snum_d > 2*Ny){
-				break; // if drainage is circulating (infinite loop)
-			}
-			//PRINT_ERROR("flag 2-3")
-			if (ddrow==drowtemp-1 || ddrow==drowtemp+1){
-				if (ddcol == dcoltemp){
-					dist2 = dy;
-				}
-				if (ddcol == dcoltemp+1 || ddcol == dcoltemp-1){
-					dist2 = dxy;
-				}
-			}
-			else if (ddrow == urowtemp){
-				if (ddcol == dcoltemp+1 || ddcol == dcoltemp-1){
-					dist2 = dx;
-				}
-			} 
-			else{
-				dist2 = dxy;
-			}
-			//PRINT_ERROR("flag 2-4")
-			//PRINT_ERROR("snum d ddrow ddcol %d %d %d", snum_d, ddrow, ddcol)
-			streamtopo_d[snum_d] = topo[ddrow][ddcol]; 
-			//PRINT_ERROR("flag 2-4-1")  
-			streamslope_d[snum_d] = -(topo[ddrow][ddcol]-topo[drowtemp][dcoltemp])/dist2;
-			snum_d++;
-			//PRINT_ERROR("flag 2-5")
-		}	
-	}
-   
-	//PRINT_ERROR("flag 3")
-    float strsum1 = 0;
-    float strsum2 = 0;
-    for (int i = 0; i < snum; i++){
-        strsum1 += streamslope[i];
-    }
-    for (int i = 0; i < snum_d; i++){
-        strsum2 += streamslope_d[i];
-    }
-    strsum1 = strsum1/snum;
-    strsum2 = strsum2/snum_d;
-	//PRINT_ERROR("flag 4")
-    if (slope < strsum1 && strsum1 > 2*strsum2){
-		if (row > 2 && row < Ny-2 && col > 2 && col < Nx-2){
-			s1 = (topo[row-1][col-1] - topo[row][col]) / dxy;
-			s2 = (topo[row-1][col] - topo[row][col]) / dy;
-			s3 = (topo[row-1][col+1] - topo[row][col]) / dxy;
-			s4 = (topo[row][col-1] - topo[row][col]) / dx;
-			s5 = (topo[row][col+1] - topo[row][col]) / dx;
-			s6 = (topo[row+1][col-1] - topo[row][col]) / dxy;
-			s7 = (topo[row+1][col] - topo[row][col]) / dy;
-			s8 = (topo[row+1][col+1] - topo[row][col]) / dxy;
-			s11 = (topo[drow-1][dcol-1] - topo[drow][dcol]) / dxy;
-			s12 = (topo[drow-1][dcol] - topo[drow][dcol]) / dy;
-			s13 = (topo[drow-1][dcol+1] - topo[drow][dcol]) / dxy;
-			s14 = (topo[drow][dcol-1] - topo[drow][dcol]) / dx;
-			s15 = (topo[drow][dcol+1] - topo[drow][dcol]) / dx;
-			s16 = (topo[drow+1][dcol-1] - topo[drow][dcol]) / dxy;
-			s17 = (topo[drow+1][dcol] - topo[drow][dcol]) / dy;
-			s18 = (topo[drow+1][dcol+1] - topo[drow][dcol]) / dxy;
-			savg = (s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8) / 8;
-			savg1 = (s11 + s12 + s13 + s14 + s15 + s16 + s17 + s18) / 8;
-			sstdev = sqrt((pow(s1-savg, 2) + pow(s2-savg, 2) + pow(s3-savg, 2) + pow(s4-savg, 2) + 
-					pow(s5-savg, 2)+ pow(s6-savg, 2)+ pow(s7-savg, 2)+ pow(s8-savg, 2)) / 8);
-			sstdev1 = sqrt((pow(s11-savg1, 2) + pow(s12-savg1, 2) + pow(s13-savg1, 2) + pow(s14-savg1, 2) + 
-					pow(s15-savg1, 2)+ pow(s16-savg1, 2)+ pow(s17-savg1, 2)+ pow(s18-savg1, 2)) / 8);
-			if (sstdev > sstdev1 + 10){
-				if (savg > savg1 + 10){
-					lfs = 1; // indicator of fan apex	
-					drainage[row][col].fanfreq = drainage[row][col].fanfreq + 1;												
-				}
-			}
-		}        
-    }	
-	/*  */
-	//PRINT_ERROR("flag 5")
-	if (row == 0 || row == Ny-1){
-		TRANSPORT_BOUNDARY_CONDITIONS;
-	}
-    if (lfs == 1){
-		d_mass = (dist / (dist)) * (drainage[row][col].masstr) * dt_st;
-	}
-    else{
-        if (transp_capacity_eq >= drainage[row][col].masstr) {
-            float a=1.5, Kw=1.1, aw=0.5;
-            spl_m = (3*0.5)/5; 
-            spl_n = 7/10; 
-            ERODED_ERODIBILITY;
-            double in_eqn = 1020 * g * pow((double).05/Kw,(double) 3/5) *
-            pow((double)drainage[row][col].effdischarge, (double)(3*(1-aw))/5) *  
-            pow((double)slope, (double)7/10);
-            dh = erodibility_aux/secsperyr * pow((double) in_eqn, a) * dt_st; 
-            d_mass = THICK2SEDMASS(dh);
-        }
-        else{
-            d_mass =
-            dist / l_fluv_sedim * (transp_capacity_eq - drainage[row][col].masstr) * dt_st;
-        }
-    }
-	break;
-
-
-/* */
-case 109: 
-				transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	// initial calculation of transport capacity 
-				/* Modification of calculated transport capacity below. The original value will be passed if not fans or apices */
-				// finding one-level upstream
-				lfs = 0;
-				for (int iup=0; iup < Ny; iup++){
-					for (int jup=0; jup < Nx; jup++){
-						if (drainage[iup][jup].dr_row == row && drainage[iup][jup].dr_col == col){
-							urow1 = iup;
-							ucol1 = jup;
-						}
-					}
-				}
-				if (urow1==row-1 || urow1==row+1){
-					if (ucol1 == col){
-						dist1 = dy;
-					}
-					if (ucol1 == col + 1 || ucol1 == col - 1){
-						dist1 = dxy;
-					}
-				}
-				else if (urow1 == row){
-					if (ucol1 == col+1 || ucol1 == col-1){
-						dist1 = dx;
-					}
-				}
-				else{
-					dist1 = dxy;
-				}
-				if (urow1 < 0 || urow1 > Ny-1 || ucol1 < 0 || ucol1 > Nx-1){
-					uslope1 = 1e-15;
-				}
-				if (urow1 != 0 && ucol1 != 0){
-					if (urow1 != Ny-1 && ucol1 != Nx-1){
-						//PRINT_ERROR("row col [%d][%d] urow ucol [%d][%d] dist1 [%.1f]", row, col, urow1, ucol1, dist1);
-						if (dist1 > 0){
-							uslope1 = -(topo[row][col]-topo[urow1][ucol1])/dist1;
-						}
-						//else{
-						//	uslope1 = 1e-15;
-						//}
-					}
-				}
-				//else{
-				//	uslope1 = 1e-15;
-				//}
-				// Within domain
-				if (row < Ny - 3 && row > 3){
-					if (col < Nx - 3 && col > 3){
-						if (drainage[row][col].type == 'R' && drainage[drow][dcol].type == 'R'){ // edited 041121
-							if (IN_DOMAIN(drow, dcol)){
-								if (uslope1 >= slope){
-									// obtain statistical values																			
-									s1 = (topo[row-1][col-1] - topo[row][col]) / dxy;
-									s2 = (topo[row-1][col] - topo[row][col]) / dy;
-									s3 = (topo[row-1][col+1] - topo[row][col]) / dxy;
-									s4 = (topo[row][col-1] - topo[row][col]) / dx;
-									s5 = (topo[row][col+1] - topo[row][col]) / dx;
-									s6 = (topo[row+1][col-1] - topo[row][col]) / dxy;
-									s7 = (topo[row+1][col] - topo[row][col]) / dy;
-									s8 = (topo[row+1][col+1] - topo[row][col]) / dxy;
-									s11 = (topo[drow-1][dcol-1] - topo[drow][dcol]) / dxy;
-									s12 = (topo[drow-1][dcol] - topo[drow][dcol]) / dy;
-									s13 = (topo[drow-1][dcol+1] - topo[drow][dcol]) / dxy;
-									s14 = (topo[drow][dcol-1] - topo[drow][dcol]) / dx;
-									s15 = (topo[drow][dcol+1] - topo[drow][dcol]) / dx;
-									s16 = (topo[drow+1][dcol-1] - topo[drow][dcol]) / dxy;
-									s17 = (topo[drow+1][dcol] - topo[drow][dcol]) / dy;
-									s18 = (topo[drow+1][dcol+1] - topo[drow][dcol]) / dxy;
-									savg = (s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8) / 8;
-									savg1 = (s11 + s12 + s13 + s14 + s15 + s16 + s17 + s18) / 8;
-									sstdev = sqrt((pow(s1-savg, 2) + pow(s2-savg, 2) + pow(s3-savg, 2) + pow(s4-savg, 2) + 
-											pow(s5-savg, 2)+ pow(s6-savg, 2)+ pow(s7-savg, 2)+ pow(s8-savg, 2)) / 8);
-									sstdev1 = sqrt((pow(s11-savg1, 2) + pow(s12-savg1, 2) + pow(s13-savg1, 2) + pow(s14-savg1, 2) + 
-											pow(s15-savg1, 2)+ pow(s16-savg1, 2)+ pow(s17-savg1, 2)+ pow(s18-savg1, 2)) / 8);
-									if (sstdev > sstdev1){
-										if (savg > 2*savg1){
-											//PRINT_ERROR("Alluvial fan apex");
-											//transp_capacity_eq = 0;	
-											lfs = 1;	
-											drainage[row][col].fanfreq = drainage[row][col].fanfreq + 1;												
-										}
-									}
-								}
-							}							
-						}
-					}
-				}
-				if (row == 0 || row == Ny-1){
-					TRANSPORT_BOUNDARY_CONDITIONS; // macro for boundary conditions not even effective 
-				}
-				if (transp_capacity_eq >= drainage[row][col].masstr) {
-					float a=1.5, Kw=1.1, aw=0.5;
-					spl_m = (3*0.5)/5; 
-					spl_n = 7/10; 
-					ERODED_ERODIBILITY;
-					double in_eqn = 1020 * g * pow((double).05/Kw,(double) 3/5) *
-					pow((double)drainage[row][col].effdischarge, (double)(3*(1-aw))/5) * 
-					pow((double)slope, (double)7/10);
-					dh = erodibility_aux/secsperyr * pow((double) in_eqn, a) * dt_st; 
-					d_mass = THICK2SEDMASS(dh);
-				}
-				else{
-					d_mass =
-					dist / l_fluv_sedim * (transp_capacity_eq - drainage[row][col].masstr) * dt_st;
-				}
-				if (lfs == 1){
-					d_mass = (dist / (0.5*dist)) * (transp_capacity_eq - drainage[row][col].masstr) * dt_st;
-				}
-				break;			
-
-/* */
-case 110: 
-				transp_capacity_eq = K_river_cap * drainage[row][col].effdischarge * slope;	// initial calculation of transport capacity 
-				/* Modification of calculated transport capacity below. The original value will be passed if not fans or apices */
-				// finding one-level upstream
-				lfs = 0;
-				for (int iup=0; iup < Ny; iup++){
-					for (int jup=0; jup < Nx; jup++){
-						if (drainage[iup][jup].dr_row == row && drainage[iup][jup].dr_col == col){
-							urow1 = iup;
-							ucol1 = jup;
-						}
-					}
-				}
-				if (urow1==row-1 || urow1==row+1){
-					if (ucol1 == col){
-						dist1 = dy;
-					}
-					if (ucol1 == col + 1 || ucol1 == col - 1){
-						dist1 = dxy;
-					}
-				}
-				else if (urow1 == row){
-					if (ucol1 == col+1 || ucol1 == col-1){
-						dist1 = dx;
-					}
-				}
-				else{
-					dist1 = dxy;
-				}
-				if (urow1 < 0 || urow1 > Ny-1 || ucol1 < 0 || ucol1 > Nx-1){
-					uslope1 = 1e-15;
-				}
-				if (urow1 != 0 && ucol1 != 0){
-					if (urow1 != Ny-1 && ucol1 != Nx-1){
-						//PRINT_ERROR("row col [%d][%d] urow ucol [%d][%d] dist1 [%.1f]", row, col, urow1, ucol1, dist1);
-						if (dist1 > 0){
-							uslope1 = -(topo[row][col]-topo[urow1][ucol1])/dist1;
-						}
-						//else{
-						//	uslope1 = 1e-15;
-						//}
-					}
-				}
-				//else{
-				//	uslope1 = 1e-15;
-				//}
-				// Within domain
-				if (row < Ny - 3 && row > 3){
-					if (col < Nx - 3 && col > 3){
-						if (drainage[row][col].type == 'R' && drainage[drow][dcol].type == 'R'){ // edited 041121
-							if (IN_DOMAIN(drow, dcol)){
-								if (uslope1 >= slope){
-									// obtain statistical values																			
-									s1 = (topo[row-1][col-1] - topo[row][col]) / dxy;
-									s2 = (topo[row-1][col] - topo[row][col]) / dy;
-									s3 = (topo[row-1][col+1] - topo[row][col]) / dxy;
-									s4 = (topo[row][col-1] - topo[row][col]) / dx;
-									s5 = (topo[row][col+1] - topo[row][col]) / dx;
-									s6 = (topo[row+1][col-1] - topo[row][col]) / dxy;
-									s7 = (topo[row+1][col] - topo[row][col]) / dy;
-									s8 = (topo[row+1][col+1] - topo[row][col]) / dxy;
-									s11 = (topo[drow-1][dcol-1] - topo[drow][dcol]) / dxy;
-									s12 = (topo[drow-1][dcol] - topo[drow][dcol]) / dy;
-									s13 = (topo[drow-1][dcol+1] - topo[drow][dcol]) / dxy;
-									s14 = (topo[drow][dcol-1] - topo[drow][dcol]) / dx;
-									s15 = (topo[drow][dcol+1] - topo[drow][dcol]) / dx;
-									s16 = (topo[drow+1][dcol-1] - topo[drow][dcol]) / dxy;
-									s17 = (topo[drow+1][dcol] - topo[drow][dcol]) / dy;
-									s18 = (topo[drow+1][dcol+1] - topo[drow][dcol]) / dxy;
-									savg = (s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8) / 8;
-									savg1 = (s11 + s12 + s13 + s14 + s15 + s16 + s17 + s18) / 8;
-									sstdev = sqrt((pow(s1-savg, 2) + pow(s2-savg, 2) + pow(s3-savg, 2) + pow(s4-savg, 2) + 
-											pow(s5-savg, 2)+ pow(s6-savg, 2)+ pow(s7-savg, 2)+ pow(s8-savg, 2)) / 8);
-									sstdev1 = sqrt((pow(s11-savg1, 2) + pow(s12-savg1, 2) + pow(s13-savg1, 2) + pow(s14-savg1, 2) + 
-											pow(s15-savg1, 2)+ pow(s16-savg1, 2)+ pow(s17-savg1, 2)+ pow(s18-savg1, 2)) / 8);
-									if (sstdev > sstdev1){
-										if (savg > 2*savg1){
-											//PRINT_ERROR("Alluvial fan apex");
-											//transp_capacity_eq = 0;	
-											lfs = 1;	
-											drainage[row][col].fanfreq = drainage[row][col].fanfreq + 1;												
-										}
-									}
-								}
-							}							
-						}
-					}
-				}
-				if (row == 0 || row == Ny-1){
-					TRANSPORT_BOUNDARY_CONDITIONS; // macro for boundary conditions not even effective 
-				}
-				if (lfs == 1){
-					d_mass = (dist / (3*dist)) * (drainage[row][col].masstr) * dt_st;
-				}
-				else{
-					if (transp_capacity_eq >= drainage[row][col].masstr) {
-						float a=1.5, Kw=1.1, aw=0.5;
-						spl_m = (3*0.5)/5; 
-						spl_n = 7/10; 
-						ERODED_ERODIBILITY;
-						double in_eqn = 1020 * g * pow((double).05/Kw,(double) 3/5) *
-						pow((double)drainage[row][col].effdischarge, (double)(3*(1-aw))/5) *  
-						pow((double)slope, (double)7/10);
-						dh = erodibility_aux/secsperyr * pow((double) in_eqn, a) * dt_st; 
-						d_mass = THICK2SEDMASS(dh);
-					}
-					else{
-						d_mass =
-						dist / l_fluv_sedim * (transp_capacity_eq - drainage[row][col].masstr) * dt_st;						
-					}				
-				}
-				
-				break;			
-			
-	    }
-	    	break;
 	    	default:
 	    	    PRINT_ERROR("[%d][%d] has no defined drainage type.", row, col);
 	}
@@ -5166,7 +4363,7 @@ int find_up_inlet (int row, int col, BOOL **done)
 	for (int i=0; i<Ny; i++)  for (int j=0; j<Nx; j++) {
 		if (drainage[i][j].dr_row == row && drainage[i][j].dr_col == col) {
 			float 	Dl = sqrt((col-j)*dx*(col-j)*dx + (row-i)*dy*(row-i)*dy),
-				weight = pow(drainage[row][col].effdischarge/maxdisch, -spl_m/spl_n);
+				weight = pow(drainage[row][col].discharge/maxdisch, -spl_m/spl_n);
 			(length) += Dl;
 			(chi)    += Dl*weight;
 			n_above   += find_up_inlet (i, j, done);
@@ -5181,7 +4378,7 @@ int find_up_inlet (int row, int col, BOOL **done)
 		dcol=drainage[row][col].dr_col;
 		if (OUT_DOMAIN(drow,dcol)) {drow=row; dcol=col;}
 		dl = sqrt((dcol-col)*dx*(dcol-col)*dx + (drow-row)*dy*(drow-row)*dy);
-		weight=pow(drainage[drow][dcol].effdischarge/maxdisch, -spl_m/spl_n);
+		weight=pow(drainage[drow][dcol].discharge/maxdisch, -spl_m/spl_n);
 	}
 	(level) --;
 	return (n_above);
