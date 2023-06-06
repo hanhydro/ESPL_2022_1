@@ -1,0 +1,19 @@
+time	50
+cut_all 0
+fault	0
+vel_x	0
+gradual 1
+time_stop	70
+z_default	0
+
+0
+-60e3 30e3
+60e3  30e3
+60e3  -10e3
+-60e3 -10e3
+
+6000
+-60e3 30e3
+60e3  30e3
+60e3  -10e3
+-60e3 -10e3
